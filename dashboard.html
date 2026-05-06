@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Login ── */
+    .login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .login-card {
+      background: #141822;
+      border: 1px solid #1e2235;
+      border-radius: 12px;
+      padding: 36px;
+      width: 360px;
+    }
+
+    .login-card h2 { font-size: 20px; margin-bottom: 6px; }
+    .login-card p  { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid #1e2235;
+      background: #141822;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    header h1 { font-size: 17px; font-weight: 600; color: #f1f5f9; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    #status { font-size: 12px; color: #475569; }
+
+    /* ── Buttons ── */
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+    .btn-ghost { background: #1e2235; color: #94a3b8; }
+    .btn-ghost:hover { background: #263048; }
+
+    .btn-danger { background: transparent; color: #f87171; border: 1px solid #7f1d1d; }
+    .btn-danger:hover { background: #1e0a0a; }
+
+    /* ── Inputs ── */
+    label { display: block; font-size: 12px; color: #64748b; margin-bottom: 5px; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"],
+    select {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #1e2235;
+      border-radius: 6px;
+      padding: 9px 11px;
+      color: #e2e8f0;
+      font-size: 13px;
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: #2563eb; }
+    select option { background: #141822; }
+
+    /* ── Main ── */
+    .main { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+    /* ── Add Task Bar ── */
+    .add-bar {
+      display: grid;
+      grid-template-columns: 1fr 140px 120px auto;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 28px;
+      background: #141822;
+      border: 1px solid #1e2235;
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .add-bar input, .add-bar select { margin-bottom: 0; }
+    .add-bar label { margin-bottom: 4px; font-size: 11px; }
+
+    /* ── Sections ── */
+    .section { margin-bottom: 26px; }
+
+    .section-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #475569;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-header.overdue { color: #f87171; }
+    .section-header.today   { color: #34d399; }
+
+    .badge-count {
+      background: #1e2235;
+      color: #64748b;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 10px;
+    }
+
+    /* ── Task Row ── */
+    .task-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      transition: background 0.1s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .task:hover { background: #141822; }
+
+    .priority-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .p-urgent { background: #f87171; }
+    .p-high   { background: #fb923c; }
+    .p-normal { background: #60a5fa; }
+    .p-low    { background: #4b5563; }
+
+    .task-name {
+      flex: 1;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .source-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .source-manual  { background: #1e2235; color: #475569; }
+    .source-clickup { background: #1a2744; color: #60a5fa; }
+
+    .due-label { font-size: 11px; color: #475569; flex-shrink: 0; }
+    .due-label.overdue { color: #f87171; }
+    .due-label.today   { color: #34d399; }
+
+    .task-del {
+      background: none; border: none;
+      color: #334155; font-size: 15px;
+      padding: 0 2px; cursor: pointer;
+      line-height: 1; flex-shrink: 0;
+      transition: color 0.1s;
+    }
+    .task-del:hover { color: #f87171; background: none; }
+
+    /* ── States ── */
+    .loader { text-align: center; padding: 60px; color: #475569; font-size: 13px; }
+
+    .error-box {
+      background: #1e0a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: 13px 16px;
+      color: #f87171;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .empty { color: #334155; font-size: 13px; padding: 10px 12px; }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 20;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: #141822;
+      border: 1px solid #1e2235;
+      border-radius: 12px;
+      padding: 24px;
+      width: 380px;
+      max-width: 92vw;
+    }
+    .modal h3 { font-size: 15px; margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+    hr { border: none; border-top: 1px solid #1e2235; margin: 16px 0; }
+    .hint { font-size: 11px; color: #475569; margin-top: -10px; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h2>Dashboard</h2>
+    <p>Sign in to access your tasks.</p>
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="you@email.com" autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter') login()">
+    <div id="loginError" class="error-box" style="display:none;margin-bottom:14px"></div>
+    <button class="btn-primary" onclick="login()" id="loginBtn" style="width:100%">Sign in</button>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app" style="display:none">
+  <header>
+    <h1>Dashboard</h1>
+    <div class="header-right">
+      <span id="status"></span>
+      <button class="btn-ghost" onclick="loadAll()">Refresh</button>
+      <button class="btn-ghost" onclick="openSettings()">Settings</button>
+      <button class="btn-danger" onclick="signOut()">Sign out</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div id="errorBox" class="error-box" style="display:none"></div>
+
+    <div class="add-bar">
+      <div>
+        <label>Task name</label>
+        <input type="text" id="newName" placeholder="What needs doing?" onkeydown="if(event.key==='Enter') addTask()">
+      </div>
+      <div>
+        <label>Due date</label>
+        <input type="date" id="newDue">
+      </div>
+      <div>
+        <label>Priority</label>
+        <select id="newPriority">
+          <option value="normal">Normal</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div style="padding-top:18px">
+        <button class="btn-primary" onclick="addTask()" id="addBtn">Add</button>
+      </div>
+    </div>
+
+    <div id="loader" class="loader">Loading tasks…</div>
+    <div id="dashboard" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ── Settings Modal ── -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal">
+    <h3>Settings</h3>
+    <label>ClickUp API token</label>
+    <input type="password" id="cuToken" placeholder="pk_xxxxxxxxxxxx">
+    <p class="hint">ClickUp → Settings → Apps → API Token. Stored in this browser only.</p>
+    <label>ClickUp List ID <span style="color:#334155">(optional — faster loads)</span></label>
+    <input type="text" id="cuListId" placeholder="901xxxxxxxx">
+    <p class="hint">From your ClickUp list URL: app.clickup.com/.../v/li/{list_id}</p>
+    <hr>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SB_URL  = 'https://eiwwdssiiiafucrlopuj.supabase.co';
+  const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpd3dkc3NpaWlhZnVjcmxvcHVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMDgyMzQsImV4cCI6MjA5MzY4NDIzNH0.HJAVJV9yD2VhN_bGIjyxXTKhQ5yVr2cy8TdKnZV1GHM';
+  const CU_BASE = 'https://api.clickup.com/api/v2';
+
+  // ── Supabase REST helpers ─────────────────────────────
+
+  function getSession() {
+    try { return JSON.parse(localStorage.getItem('sb_session') || 'null'); } catch { return null; }
+  }
+
+  function saveSession(s) { localStorage.setItem('sb_session', JSON.stringify(s)); }
+  function clearSession()  { localStorage.removeItem('sb_session'); }
+
+  function authHeaders(token) {
+    return {
+      'apikey':        SB_KEY,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type':  'application/json'
+    };
+  }
+
+  async function sbAuth(email, password) {
+    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method:  'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, password })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error_description || data.msg || 'Login failed');
+    return data;
+  }
+
+  async function sbSelect(table, query = '') {
+    const session = getSession();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, {
+      headers: authHeaders(session.access_token)
+    });
+    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || 'Database error');
+    return data;
+  }
+
+  async function sbInsert(table, row) {
+    const session = getSession();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method:  'POST',
+      headers: { ...authHeaders(session.access_token), 'Prefer': 'return=representation' },
+      body:    JSON.stringify(row)
+    });
+    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || 'Insert failed');
+    return data;
+  }
+
+  async function sbDelete(table, id) {
+    const session = getSession();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method:  'DELETE',
+      headers: authHeaders(session.access_token)
+    });
+    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    if (!r.ok) throw new Error('Delete failed');
+  }
+
+  // ── Auth ─────────────────────────────────────────────
+
+  function showLogin() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+
+  function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    loadAll();
+  }
+
+  async function boot() {
+    const session = getSession();
+    if (session && session.access_token) showApp();
+    else showLogin();
+  }
+
+  async function login() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn      = document.getElementById('loginBtn');
+    const errBox   = document.getElementById('loginError');
+
+    if (!email || !password) {
+      errBox.textContent = 'Please enter your email and password.';
+      errBox.style.display = '';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    errBox.style.display = 'none';
+
+    try {
+      const session = await sbAuth(email, password);
+      saveSession(session);
+      showApp();
+    } catch (e) {
+      errBox.textContent = e.message;
+      errBox.style.display = '';
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  }
+
+  function signOut() {
+    clearSession();
+    showLogin();
+  }
+
+  // ── Settings ─────────────────────────────────────────
+
+  function openSettings() {
+    document.getElementById('cuToken').value  = localStorage.getItem('cu_token') || '';
+    document.getElementById('cuListId').value = localStorage.getItem('cu_list_id') || '';
+    document.getElementById('settingsModal').classList.add('open');
+  }
+
+  function closeSettings() {
+    document.getElementById('settingsModal').classList.remove('open');
+  }
+
+  function saveSettings() {
+    const t = document.getElementById('cuToken').value.trim();
+    const l = document.getElementById('cuListId').value.trim();
+    if (t) localStorage.setItem('cu_token', t); else localStorage.removeItem('cu_token');
+    if (l) localStorage.setItem('cu_list_id', l); else localStorage.removeItem('cu_list_id');
+    closeSettings();
+    loadAll();
+  }
+
+  // ── Load ─────────────────────────────────────────────
+
+  async function loadAll() {
+    document.getElementById('loader').style.display = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'none';
+    setStatus('Loading…');
+
+    const [nativeResult, clickupResult] = await Promise.allSettled([
+      loadNativeTasks(),
+      loadClickupTasks()
+    ]);
+
+    const tasks = [
+      ...(nativeResult.status  === 'fulfilled' ? nativeResult.value  : []),
+      ...(clickupResult.status === 'fulfilled' ? clickupResult.value : [])
+    ];
+
+    if (nativeResult.status === 'rejected')  showError('Supabase: '  + nativeResult.reason?.message);
+    if (clickupResult.status === 'rejected') showError('ClickUp: '   + clickupResult.reason?.message);
+
+    render(tasks);
+    setStatus('Updated ' + new Date().toLocaleTimeString());
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('dashboard').style.display = '';
+  }
+
+  async function loadNativeTasks() {
+    const rows = await sbSelect('tasks', 'completed=eq.false&order=due_date');
+    return rows.map(t => ({
+      id:       t.id,
+      name:     t.name,
+      due:      t.due_date ? new Date(t.due_date + 'T00:00:00') : null,
+      priority: t.priority || 'normal',
+      source:   'manual',
+      url:      null,
+      list:     ''
+    }));
+  }
+
+  async function loadClickupTasks() {
+    const token  = localStorage.getItem('cu_token');
+    const listId = localStorage.getItem('cu_list_id');
+    if (!token) return [];
+
+    const h = { Authorization: token };
+    let raw = [];
+
+    if (listId) {
+      const r = await fetch(`${CU_BASE}/list/${listId}/task?include_closed=false`, { headers: h });
+      if (!r.ok) { const body = await r.json().catch(() => ({})); throw new Error('ClickUp ' + r.status + ': ' + (body.err || body.error || JSON.stringify(body))); }
+      raw = (await r.json()).tasks || [];
+    } else {
+      const teamsR = await fetch(`${CU_BASE}/team`, { headers: h });
+      if (!teamsR.ok) throw new Error('ClickUp API error ' + teamsR.status);
+      const teams = (await teamsR.json()).teams || [];
+      for (const team of teams) {
+        const spaces = (await (await fetch(`${CU_BASE}/team/${team.id}/space?archived=false`, { headers: h })).json()).spaces || [];
+        for (const space of spaces) {
+          const lists = (await (await fetch(`${CU_BASE}/space/${space.id}/list?archived=false`, { headers: h })).json()).lists || [];
+          for (const list of lists) {
+            const tasks = (await (await fetch(`${CU_BASE}/list/${list.id}/task?include_closed=false`, { headers: h })).json()).tasks || [];
+            tasks.forEach(t => { t._listName = list.name; raw.push(t); });
+          }
+        }
+      }
+    }
+
+    return raw.map(t => {
+      const pid  = t.priority ? (typeof t.priority === 'object' ? t.priority.id : t.priority) : 3;
+      const pMap = { 1: 'urgent', 2: 'high', 3: 'normal', 4: 'low' };
+      return {
+        id:       'cu_' + t.id,
+        name:     t.name,
+        due:      t.due_date ? new Date(parseInt(t.due_date)) : null,
+        priority: pMap[pid] || 'normal',
+        source:   'clickup',
+        url:      t.url || null,
+        list:     t._listName || (t.list && t.list.name) || ''
+      };
+    });
+  }
+
+  // ── Add / Delete ─────────────────────────────────────
+
+  async function addTask() {
+    const name = document.getElementById('newName').value.trim();
+    if (!name) return;
+
+    const due      = document.getElementById('newDue').value || null;
+    const priority = document.getElementById('newPriority').value;
+    const btn      = document.getElementById('addBtn');
+
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+      await sbInsert('tasks', { name, due_date: due, priority, source: 'manual' });
+      document.getElementById('newName').value = '';
+      document.getElementById('newDue').value  = '';
+      document.getElementById('newPriority').value = 'normal';
+      loadAll();
+    } catch (e) {
+      showError(e.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Add';
+  }
+
+  async function deleteTask(id) {
+    try {
+      await sbDelete('tasks', id);
+      loadAll();
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  // ── Render ───────────────────────────────────────────
+
+  function render(tasks) {
+    const now     = new Date();
+    const today   = day(now);
+    const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + 7);
+
+    const g = { overdue: [], today: [], week: [], upcoming: [], noDue: [] };
+
+    tasks.forEach(t => {
+      if (!t.due) { g.noDue.push(t); return; }
+      const d = day(t.due);
+      if      (d < today)          g.overdue.push(t);
+      else if (+d === +today)      g.today.push(t);
+      else if (d < weekEnd)        g.week.push(t);
+      else                         g.upcoming.push(t);
+    });
+
+    const html = [
+      section('Overdue',     g.overdue,  'overdue', true),
+      section('Today',       g.today,    'today',   false),
+      section('This Week',   g.week,     '',        false),
+      section('Upcoming',    g.upcoming, '',        false),
+      section('No Due Date', g.noDue,    '',        false),
+    ].join('');
+
+    document.getElementById('dashboard').innerHTML =
+      html || '<p class="empty">No tasks yet. Add one above.</p>';
+  }
+
+  function section(title, tasks, cls, isOverdue) {
+    if (!tasks.length) return '';
+    return `<div class="section">
+      <div class="section-header ${cls}">${title} <span class="badge-count">${tasks.length}</span></div>
+      <div class="task-list">${tasks.map(t => taskRow(t, isOverdue)).join('')}</div>
+    </div>`;
+  }
+
+  function taskRow(t, isOverdue) {
+    const dueTxt = t.due ? fmtDate(t.due) : '';
+    const dueCls = isOverdue ? 'overdue' : (dueTxt === 'Today' ? 'today' : '');
+    const inner  = `
+      <span class="priority-dot p-${t.priority}"></span>
+      <span class="task-name">${esc(t.name)}</span>
+      <span class="source-badge source-${t.source}">${t.source === 'clickup' ? 'ClickUp' : 'Manual'}</span>
+      ${t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
+      ${dueTxt  ? `<span class="due-label ${dueCls}">${dueTxt}</span>` : ''}
+      ${t.source === 'manual' ? `<button class="task-del" onclick="deleteTask('${t.id}')" title="Remove">×</button>` : ''}
+    `;
+    return t.source === 'clickup' && t.url
+      ? `<a class="task" href="${t.url}" target="_blank" rel="noopener">${inner}</a>`
+      : `<div class="task">${inner}</div>`;
+  }
+
+  // ── Helpers ──────────────────────────────────────────
+
+  function day(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+  function fmtDate(d) {
+    const today    = day(new Date());
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const t        = day(d);
+    if (t < today)        { const n = Math.round((today - t) / 86400000); return n === 1 ? '1 day ago' : `${n}d ago`; }
+    if (+t === +today)    return 'Today';
+    if (+t === +tomorrow) return 'Tomorrow';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+  function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.textContent = msg;
+    b.style.display = '';
+  }
+
+  boot();
+</script>
+</body>
+</html>
