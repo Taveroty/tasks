@@ -578,9 +578,17 @@
       }
     }
 
+    const childrenOf = {};
+    raw.filter(t => t.parent).forEach(t => {
+      const pid = typeof t.parent === 'object' ? t.parent.id : t.parent;
+      if (!childrenOf[pid]) childrenOf[pid] = [];
+      childrenOf[pid].push(t);
+    });
+
     return raw.filter(t => !t.parent).map(t => {
       const pid  = t.priority ? (typeof t.priority === 'object' ? t.priority.id : t.priority) : 3;
       const pMap = { 1: 'urgent', 2: 'high', 3: 'normal', 4: 'low' };
+      const subs = childrenOf[t.id] || [];
       return {
         id:       'cu_' + t.id,
         name:     t.name,
@@ -589,7 +597,7 @@
         source:   'clickup',
         url:      t.url || null,
         list:     t._listName || (t.list && t.list.name) || '',
-        subtasks: (t.subtasks || []).map(s => ({
+        subtasks: subs.map(s => ({
           id:        's_cu_' + s.id,
           name:      s.name,
           completed: !!(s.status && (s.status.type === 'closed' || s.status.status === 'complete')),
@@ -622,6 +630,11 @@
     if (!drawer) return;
     const isOpen = drawer.classList.contains('open');
     if (!isOpen && !drawer.dataset.loaded) {
+      if (taskId.startsWith('cu_')) {
+        drawer.dataset.loaded = '1';
+        drawer.classList.add('open');
+        return;
+      }
       drawer.innerHTML = '<span class="sub-loading">Loading…</span>';
       drawer.classList.add('open');
       try {
