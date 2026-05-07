@@ -578,7 +578,7 @@
       }
     }
 
-    return raw.map(t => {
+    return raw.filter(t => !t.parent).map(t => {
       const pid  = t.priority ? (typeof t.priority === 'object' ? t.priority.id : t.priority) : 3;
       const pMap = { 1: 'urgent', 2: 'high', 3: 'normal', 4: 'low' };
       return {
