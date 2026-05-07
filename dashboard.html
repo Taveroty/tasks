@@ -278,6 +278,16 @@
     .sub-add-btn:hover { background: #263048; }
     .sub-loading, .sub-error { font-size: 11px; color: #475569; padding: 2px 0; }
     .sub-error { color: #f87171; }
+
+    .task.has-subs { cursor: pointer; }
+    .task-link { color: inherit; text-decoration: none; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-link:hover { text-decoration: underline; }
+    .sub-chevron {
+      font-size: 9px; color: #475569; flex-shrink: 0;
+      transition: transform 0.2s; display: inline-block;
+    }
+    .subtask-drawer.open ~ * { }
+    .task-wrapper.expanded .sub-chevron { transform: rotate(90deg); }
   </style>
 </head>
 <body>
@@ -626,17 +636,20 @@
   }
 
   async function toggleSubtasks(taskId) {
-    const drawer = document.getElementById('sub-' + taskId);
+    const drawer  = document.getElementById('sub-' + taskId);
+    const wrapper = document.getElementById('wrap-' + taskId);
     if (!drawer) return;
     const isOpen = drawer.classList.contains('open');
     if (!isOpen && !drawer.dataset.loaded) {
       if (taskId.startsWith('cu_')) {
         drawer.dataset.loaded = '1';
         drawer.classList.add('open');
+        if (wrapper) wrapper.classList.add('expanded');
         return;
       }
       drawer.innerHTML = '<span class="sub-loading">Loading…</span>';
       drawer.classList.add('open');
+      if (wrapper) wrapper.classList.add('expanded');
       try {
         const subs = await sbSelect('subtasks', `task_id=eq.${taskId}&order=created_at`);
         const mapped = subs.map(s => ({ id: s.id, name: s.name, completed: s.completed, source: 'manual' }));
@@ -647,6 +660,7 @@
       }
     } else {
       drawer.classList.toggle('open');
+      if (wrapper) wrapper.classList.toggle('expanded');
     }
   }
 
@@ -778,24 +792,24 @@
     const dueTxt  = t.due ? fmtDate(t.due) : '';
     const dueCls  = isOverdue ? 'overdue' : (dueTxt === 'Today' ? 'today' : '');
     const hasSubs = t.subtasks && t.subtasks.length > 0;
-    const subCount = hasSubs ? ` ${t.subtasks.length}` : '';
+    const nameHtml = t.source === 'clickup' && t.url
+      ? `<a class="task-link" href="${t.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.name)}</a>`
+      : `<span class="task-name">${esc(t.name)}</span>`;
     const inner = `
       <span class="priority-dot p-${t.priority}"></span>
-      <span class="task-name">${esc(t.name)}</span>
+      ${hasSubs ? '<span class="sub-chevron">&#9654;</span>' : ''}
+      ${nameHtml}
       <span class="source-badge source-${t.source}">${t.source === 'clickup' ? 'ClickUp' : 'Manual'}</span>
       ${t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
       ${dueTxt  ? `<span class="due-label ${dueCls}">${dueTxt}</span>` : ''}
-      ${t.source === 'manual' ? `<button class="task-del" onclick="deleteTask('${t.id}')" title="Remove">×</button>` : ''}
-      <button class="sub-toggle" onclick="event.preventDefault();toggleSubtasks('${t.id}')" title="Subtasks">▶${subCount}</button>
+      ${t.source === 'manual' ? `<button class="task-del" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Remove">×</button>` : ''}
     `;
-    const row = t.source === 'clickup' && t.url
-      ? `<a class="task" href="${t.url}" target="_blank" rel="noopener">${inner}</a>`
-      : `<div class="task">${inner}</div>`;
+    const row = `<div class="task${hasSubs ? ' has-subs' : ''}" onclick="toggleSubtasks('${t.id}')">${inner}</div>`;
     const drawerAttrs = hasSubs && t.source === 'clickup' ? ' data-loaded="1"' : '';
     const drawerContent = hasSubs && t.source === 'clickup'
       ? renderSubtaskDrawer(t.id, t.subtasks, 'clickup')
       : '';
-    return `<div class="task-wrapper">${row}<div class="subtask-drawer" id="sub-${t.id}"${drawerAttrs}>${drawerContent}</div></div>`;
+    return `<div class="task-wrapper" id="wrap-${t.id}">${row}<div class="subtask-drawer" id="sub-${t.id}"${drawerAttrs}>${drawerContent}</div></div>`;
   }
 
   // ── Helpers ──────────────────────────────────────────
