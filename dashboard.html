@@ -179,6 +179,18 @@
     .source-manual  { background: #1e2235; color: #475569; }
     .source-clickup { background: #1a2744; color: #60a5fa; }
 
+    .doc-link {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #1e3a5f;
+      color: #60a5fa;
+      text-decoration: none;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+    .doc-link:hover { opacity: 1; }
+
     .due-label { font-size: 11px; color: #475569; flex-shrink: 0; }
     .due-label.overdue { color: #f87171; }
     .due-label.today   { color: #34d399; }
@@ -562,14 +574,15 @@
   async function loadNativeTasks() {
     const rows = await sbSelect('tasks', 'completed=eq.false&order=due_date');
     return rows.map(t => ({
-      id:       t.id,
-      name:     t.name,
-      due:      t.due_date ? new Date(t.due_date + 'T00:00:00') : null,
-      priority: t.priority || 'normal',
-      source:   'manual',
-      url:      null,
-      list:     '',
-      subtasks: []
+      id:           t.id,
+      name:         t.name,
+      due:          t.due_date ? new Date(t.due_date + 'T00:00:00') : null,
+      priority:     t.priority || 'normal',
+      source:       'manual',
+      url:          null,
+      list:         '',
+      document_url: t.document_url || null,
+      subtasks:     []
     }));
   }
 
@@ -830,15 +843,17 @@
 
     const due      = document.getElementById('newDue').value || null;
     const priority = document.getElementById('newPriority').value;
+    const docUrl   = document.getElementById('newDocUrl').value.trim() || null;
     const btn      = document.getElementById('addBtn');
 
     btn.disabled = true;
     btn.textContent = '…';
 
     try {
-      await sbInsert('tasks', { name, due_date: due, priority, source: 'manual' });
-      document.getElementById('newName').value = '';
-      document.getElementById('newDue').value  = '';
+      await sbInsert('tasks', { name, due_date: due, priority, source: 'manual', document_url: docUrl });
+      document.getElementById('newName').value   = '';
+      document.getElementById('newDocUrl').value = '';
+      document.getElementById('newDue').value    = '';
       document.getElementById('newPriority').value = 'normal';
       loadAll();
     } catch (e) {
@@ -906,6 +921,7 @@
       <span class="task-name">${esc(t.name)}</span>
       <span class="source-badge source-${t.source}">${t.source === 'clickup' ? 'ClickUp' : 'Manual'}</span>
       ${t.list && t.url ? `<a class="source-badge source-manual task-list-link" href="${t.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.list)}</a>` : t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
+      ${t.document_url ? `<a class="doc-link" href="${esc(t.document_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open document">doc</a>` : ''}
       ${dueTxt  ? `<span class="due-label ${dueCls}">${dueTxt}</span>` : ''}
       ${t.source === 'manual' ? `<button class="task-del" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Remove">×</button>` : ''}
     `;
@@ -957,6 +973,7 @@
 
     <div id="modeManual" class="mode-panel" style="display:none">
       <input type="text" id="newName" class="ai-input" placeholder="Task name" onkeydown="if(event.key==='Enter')addTask()" style="flex:2">
+      <input type="url" id="newDocUrl" class="ai-input" placeholder="Doc URL (optional)" style="flex:1.5">
       <input type="date" id="newDue" class="ai-input" style="flex:0 0 140px">
       <select id="newPriority" class="ai-input" style="flex:0 0 100px">
         <option value="normal">Normal</option>
