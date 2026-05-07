@@ -232,6 +232,41 @@
     hr { border: none; border-top: 1px solid #1e2235; margin: 16px 0; }
     .hint { font-size: 11px; color: #475569; margin-top: -10px; margin-bottom: 14px; }
 
+    /* ── AI Bar ── */
+    .ai-footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #0a0d14;
+      border-top: 1px solid #1e2235;
+      padding: 12px 24px;
+      z-index: 100;
+    }
+    .ai-bar {
+      display: flex; align-items: stretch; gap: 8px; max-width: 780px; margin: 0 auto; height: 40px;
+    }
+    .mode-panel { display: flex; align-items: stretch; gap: 8px; flex: 1; }
+    .menu-toggle {
+      background: none; border: 1px solid #1e2235; border-radius: 6px;
+      color: #94a3b8; font-size: 15px; padding: 0 12px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .menu-toggle:hover { border-color: #2563eb; color: #e2e8f0; }
+    .ai-input {
+      flex: 1; background: #0f1117; border: 1px solid #2563eb33;
+      border-radius: 6px; padding: 0 12px; color: #e2e8f0;
+      font-size: 13px; outline: none; font-family: inherit;
+      height: 100%; box-sizing: border-box;
+    }
+    .ai-input:focus { border-color: #2563eb; }
+    .ai-btn {
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 6px; padding: 0 16px; font-size: 13px;
+      cursor: pointer; white-space: nowrap; font-family: inherit;
+      flex-shrink: 0;
+    }
+    .ai-btn:hover { background: #1d4ed8; }
+    .ai-btn:disabled { background: #1e2235; color: #475569; cursor: default; }
+    .ai-error { font-size: 12px; color: #f87171; margin-bottom: 8px; }
+
     /* ── Subtasks ── */
     .task-wrapper { display: flex; flex-direction: column; }
 
@@ -280,14 +315,11 @@
     .sub-error { color: #f87171; }
 
     .task.has-subs { cursor: pointer; }
-    .task-link { color: inherit; text-decoration: none; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .task-link:hover { text-decoration: underline; }
+    .task-list-link { text-decoration: none; }
+    .task-list-link:hover { text-decoration: underline; }
     .sub-chevron {
-      font-size: 9px; color: #475569; flex-shrink: 0;
-      transition: transform 0.2s; display: inline-block;
+      font-size: 11px; color: #60a5fa; flex-shrink: 0; font-weight: 600;
     }
-    .subtask-drawer.open ~ * { }
-    .task-wrapper.expanded .sub-chevron { transform: rotate(90deg); }
   </style>
 </head>
 <body>
@@ -308,7 +340,7 @@
 </div>
 
 <!-- ── App ── -->
-<div id="app" style="display:none">
+<div id="app" style="display:none; padding-bottom: 80px">
   <header>
     <h1>Dashboard</h1>
     <div class="header-right">
@@ -322,28 +354,7 @@
   <div class="main">
     <div id="errorBox" class="error-box" style="display:none"></div>
 
-    <div class="add-bar">
-      <div>
-        <label>Task name</label>
-        <input type="text" id="newName" placeholder="What needs doing?" onkeydown="if(event.key==='Enter') addTask()">
-      </div>
-      <div>
-        <label>Due date</label>
-        <input type="date" id="newDue">
-      </div>
-      <div>
-        <label>Priority</label>
-        <select id="newPriority">
-          <option value="normal">Normal</option>
-          <option value="high">High</option>
-          <option value="urgent">Urgent</option>
-          <option value="low">Low</option>
-        </select>
-      </div>
-      <div style="padding-top:18px">
-        <button class="btn-primary" onclick="addTask()" id="addBtn">Add</button>
-      </div>
-    </div>
+
 
     <div id="loader" class="loader">Loading tasks…</div>
     <div id="dashboard" style="display:none"></div>
@@ -451,11 +462,13 @@
   function showLogin() {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
+    document.querySelector('.ai-footer').style.display = 'none';
   }
 
   function showApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = '';
+    document.querySelector('.ai-footer').style.display = '';
     loadAll();
   }
 
@@ -716,6 +729,101 @@
 
   // ── Add / Delete ─────────────────────────────────────
 
+  function parseTaskDescription(desc) {
+    let s = desc.trim();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const fmt = d => d.toISOString().split('T')[0];
+
+    // Priority
+    let priority = 'normal';
+    s = s.replace(/\b(urgent|high\s+priority|high|low\s+priority|low)\b/gi, m => {
+      const l = m.toLowerCase();
+      if (l.includes('urgent'))  priority = 'urgent';
+      else if (l.includes('high')) priority = 'high';
+      else if (l.includes('low'))  priority = 'low';
+      return '';
+    });
+
+    // Due date
+    let due_date = null;
+
+    // today / tomorrow
+    s = s.replace(/\btoday\b/gi,    () => { due_date = fmt(today); return ''; });
+    s = s.replace(/\btomorrow\b/gi, () => {
+      if (due_date) return '';
+      const d = new Date(today); d.setDate(d.getDate() + 1); due_date = fmt(d); return '';
+    });
+
+    // "in N days/weeks"
+    s = s.replace(/\bin (\d+)\s*(day|week)s?\b/gi, (_, n, unit) => {
+      if (due_date) return '';
+      const d = new Date(today);
+      d.setDate(d.getDate() + parseInt(n) * (unit[0] === 'w' ? 7 : 1));
+      due_date = fmt(d); return '';
+    });
+
+    // "next monday" or plain day name
+    const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    s = s.replace(/\b(next\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, (m, next, day) => {
+      if (due_date) return '';
+      const target = DAYS.indexOf(day.toLowerCase());
+      const d = new Date(today);
+      let diff = (target - d.getDay() + 7) % 7;
+      if (diff === 0 || next) diff += 7;
+      d.setDate(d.getDate() + diff);
+      due_date = fmt(d); return '';
+    });
+
+    // "may 7th", "jan 5", "december 25"
+    const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+    s = s.replace(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b/gi, (_, mon, day) => {
+      if (due_date) return '';
+      const m = MONTHS[mon.slice(0,3).toLowerCase()];
+      const d = new Date(today.getFullYear(), m, parseInt(day));
+      if (d < today) d.setFullYear(d.getFullYear() + 1);
+      due_date = fmt(d); return '';
+    });
+
+    // strip filler words like "due", "by", "on"
+    s = s.replace(/\b(due|by|on)\b/gi, '');
+
+    const name = s.replace(/\s+/g, ' ').trim() || desc.trim();
+    return { name, due_date, priority };
+  }
+
+  function toggleAddMode() {
+    const ai     = document.getElementById('modeAI');
+    const manual = document.getElementById('modeManual');
+    const isAI   = ai.style.display !== 'none';
+    ai.style.display     = isAI ? 'none' : 'flex';
+    manual.style.display = isAI ? 'flex' : 'none';
+  }
+
+  async function addTaskAI() {
+    const input   = document.getElementById('aiInput');
+    const btn     = document.getElementById('aiBtn');
+    const errBox  = document.getElementById('aiError');
+    const description = input.value.trim();
+    if (!description) return;
+
+    btn.disabled = true;
+    btn.textContent = '…';
+    errBox.style.display = 'none';
+
+    try {
+      const { name, due_date, priority } = parseTaskDescription(description);
+      await sbInsert('tasks', { name, due_date, priority, source: 'manual', completed: false });
+      input.value = '';
+      loadAll();
+    } catch (e) {
+      errBox.textContent = e.message;
+      errBox.style.display = '';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Add';
+    }
+  }
+
   async function addTask() {
     const name = document.getElementById('newName').value.trim();
     if (!name) return;
@@ -792,15 +900,12 @@
     const dueTxt  = t.due ? fmtDate(t.due) : '';
     const dueCls  = isOverdue ? 'overdue' : (dueTxt === 'Today' ? 'today' : '');
     const hasSubs = t.subtasks && t.subtasks.length > 0;
-    const nameHtml = t.source === 'clickup' && t.url
-      ? `<a class="task-link" href="${t.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.name)}</a>`
-      : `<span class="task-name">${esc(t.name)}</span>`;
     const inner = `
       <span class="priority-dot p-${t.priority}"></span>
-      ${hasSubs ? '<span class="sub-chevron">&#9654;</span>' : ''}
-      ${nameHtml}
+      ${hasSubs ? `<span class="sub-chevron">${t.subtasks.length}</span>` : ''}
+      <span class="task-name">${esc(t.name)}</span>
       <span class="source-badge source-${t.source}">${t.source === 'clickup' ? 'ClickUp' : 'Manual'}</span>
-      ${t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
+      ${t.list && t.url ? `<a class="source-badge source-manual task-list-link" href="${t.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.list)}</a>` : t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
       ${dueTxt  ? `<span class="due-label ${dueCls}">${dueTxt}</span>` : ''}
       ${t.source === 'manual' ? `<button class="task-del" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Remove">×</button>` : ''}
     `;
@@ -840,5 +945,29 @@
 
   boot();
 </script>
+
+<div class="ai-footer" style="display:none">
+  <div class="ai-bar">
+    <button class="menu-toggle" onclick="toggleAddMode()" title="Switch input mode">&#9776;</button>
+
+    <div id="modeAI" class="mode-panel">
+      <input type="text" id="aiInput" class="ai-input" placeholder='Describe it — "call dentist friday urgent"' onkeydown="if(event.key==='Enter')addTaskAI()">
+      <button class="ai-btn" onclick="addTaskAI()" id="aiBtn">Add</button>
+    </div>
+
+    <div id="modeManual" class="mode-panel" style="display:none">
+      <input type="text" id="newName" class="ai-input" placeholder="Task name" onkeydown="if(event.key==='Enter')addTask()" style="flex:2">
+      <input type="date" id="newDue" class="ai-input" style="flex:0 0 140px">
+      <select id="newPriority" class="ai-input" style="flex:0 0 100px">
+        <option value="normal">Normal</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+        <option value="low">Low</option>
+      </select>
+      <button class="ai-btn" onclick="addTask()" id="addBtn">Add</button>
+    </div>
+  </div>
+  <div id="aiError" class="ai-error" style="display:none"></div>
+</div>
 </body>
 </html>
