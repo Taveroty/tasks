@@ -179,6 +179,18 @@
     .source-manual  { background: #1e2235; color: #475569; }
     .source-clickup { background: #1a2744; color: #60a5fa; }
 
+    .doc-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; padding: 2px 8px 2px 6px;
+      border-radius: 12px;
+      background: #1a2030; border: 1px solid #2a3248;
+      color: #94a3b8; text-decoration: none; flex-shrink: 0;
+      max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .doc-chip:hover { background: #1e2a45; border-color: #3b4f7a; color: #e2e8f0; }
+    .doc-chip svg { flex-shrink: 0; }
+
     .due-label { font-size: 11px; color: #475569; flex-shrink: 0; }
     .due-label.overdue { color: #f87171; }
     .due-label.today   { color: #34d399; }
@@ -231,6 +243,23 @@
 
     hr { border: none; border-top: 1px solid #1e2235; margin: 16px 0; }
     .hint { font-size: 11px; color: #475569; margin-top: -10px; margin-bottom: 14px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: #1e0a0a; border: 1px solid #7f1d1d; border-radius: 8px;
+      padding: 12px 18px; color: #f87171; font-size: 13px;
+      display: flex; align-items: center; gap: 12px;
+      z-index: 200; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; pointer-events: auto; }
+    .toast-btn {
+      background: #7f1d1d; color: #fca5a5; border: none;
+      border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .toast-btn:hover { background: #991b1b; }
 
     /* ── AI Bar ── */
     .ai-footer {
@@ -289,7 +318,20 @@
       display: flex; align-items: center; gap: 8px;
       font-size: 12px; color: #94a3b8;
     }
-    .sub-check { accent-color: #2563eb; cursor: pointer; flex-shrink: 0; }
+    .sub-check {
+      appearance: none; -webkit-appearance: none;
+      width: 14px; height: 14px; flex-shrink: 0;
+      border: 1.5px solid #334155; border-radius: 3px;
+      background: transparent; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background-repeat: no-repeat; background-position: center; background-size: 10px 8px;
+    }
+    .sub-check:hover:not(:disabled) { border-color: #2563eb; }
+    .sub-check:checked {
+      background-color: #2563eb; border-color: #2563eb;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    }
+    .sub-check:disabled { opacity: 0.35; cursor: not-allowed; }
     .sub-name  { flex: 1; }
     .sub-done  { text-decoration: line-through; color: #475569; }
 
@@ -299,20 +341,44 @@
     }
     .sub-del:hover { color: #f87171; background: none; }
 
-    .sub-add-form { display: flex; gap: 6px; margin-top: 4px; }
+    .sub-add-form { display: flex; gap: 5px; margin-top: 6px; align-items: center; }
     .sub-input {
-      flex: 1; background: #0f1117; border: 1px solid #1e2235;
-      border-radius: 4px; padding: 4px 8px; color: #e2e8f0;
-      font-size: 12px; outline: none; margin-bottom: 0; width: auto;
+      flex: 2; background: #0f1117; border: 1px solid #1e2235;
+      border-radius: 4px; padding: 0 8px; color: #e2e8f0;
+      font-size: 12px; outline: none; margin: 0 !important;
+      height: 28px; box-sizing: border-box; min-width: 0;
+      align-self: center;
     }
     .sub-input:focus { border-color: #2563eb; }
-    .sub-add-btn {
-      background: #1e2235; color: #94a3b8; border: none;
-      border-radius: 4px; padding: 4px 10px; font-size: 13px; cursor: pointer;
+    .sub-date, .sub-priority, .sub-doc-input {
+      background: #0f1117; border: 1px solid #1e2235;
+      border-radius: 4px; padding: 0 6px; color: #e2e8f0;
+      font-size: 11px; outline: none; margin-bottom: 0;
+      height: 28px; box-sizing: border-box; font-family: inherit;
+      flex: none;
     }
-    .sub-add-btn:hover { background: #263048; }
+    .sub-date-wrap {
+      width: 120px; flex: none; overflow: hidden;
+      border: 1px solid #1e2235; border-radius: 4px; height: 28px;
+      box-sizing: border-box; display: flex; align-items: center;
+    }
+    .sub-date-wrap:focus-within { border-color: #2563eb; }
+    .sub-date { width: 160px; flex: none; border: none !important; outline: none; height: 26px; }
+    .sub-priority { width: 82px; cursor: pointer; }
+    .sub-doc-input { width: 90px; }
+    .sub-date:focus, .sub-priority:focus, .sub-doc-input:focus { border-color: #2563eb; }
+    .sub-priority option { background: #141822; }
+    .sub-add-btn {
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 4px; padding: 0 12px; font-size: 13px; cursor: pointer;
+      height: 28px; flex-shrink: 0;
+    }
+    .sub-add-btn:hover { background: #1d4ed8; }
     .sub-loading, .sub-error { font-size: 11px; color: #475569; padding: 2px 0; }
     .sub-error { color: #f87171; }
+    .sub-due { font-size: 10px; color: #475569; flex-shrink: 0; }
+    .sub-due.overdue { color: #f87171; }
+    .sub-priority-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
     .task.has-subs { cursor: pointer; }
     .task-list-link { text-decoration: none; }
@@ -320,6 +386,98 @@
     .sub-chevron {
       font-size: 11px; color: #60a5fa; flex-shrink: 0; font-weight: 600;
     }
+
+    .task-action-btn {
+      background: none; border: none; color: #334155; font-size: 13px;
+      padding: 0 3px; cursor: pointer; line-height: 1; flex-shrink: 0;
+      transition: color 0.15s; font-family: inherit;
+    }
+    .task-action-btn:hover { color: #94a3b8; background: none; }
+
+    .doc-edit-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 12px 6px 30px;
+      margin: 0 12px 4px 12px;
+      border-left: 2px solid #2563eb33;
+    }
+    .doc-edit-input {
+      flex: 1; background: #0f1117; border: 1px solid #2563eb;
+      border-radius: 4px; padding: 4px 8px; color: #e2e8f0;
+      font-size: 12px; outline: none; margin-bottom: 0; width: auto;
+    }
+    .doc-edit-save {
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    }
+    .doc-edit-save:hover { background: #1d4ed8; }
+    .doc-edit-cancel {
+      background: #1e2235; color: #94a3b8; border: none;
+      border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    }
+    .doc-edit-cancel:hover { background: #263048; }
+
+    /* ── Status ── */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; padding: 2px 7px; border-radius: 10px;
+      border: 1px solid transparent; cursor: pointer;
+      flex-shrink: 0; font-family: inherit; white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .status-badge:hover { opacity: 0.8; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .s-not-started { background: #1e2235; border-color: #2a3248; color: #64748b; }
+    .s-not-started .status-dot { background: #475569; }
+    .s-in-progress { background: #1a2744; border-color: #2563eb55; color: #60a5fa; }
+    .s-in-progress .status-dot { background: #60a5fa; }
+    .s-blocked     { background: #1e0a0a; border-color: #7f1d1d55; color: #f87171; }
+    .s-blocked     .status-dot { background: #f87171; }
+    .s-finished    { background: #052e16; border-color: #16532455; color: #34d399; }
+    .s-finished    .status-dot { background: #34d399; }
+
+    .status-menu {
+      background: #141822; border: 1px solid #1e2235;
+      border-radius: 8px; padding: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5); min-width: 140px;
+    }
+    .status-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 5px;
+      font-size: 12px; color: #94a3b8; cursor: pointer;
+    }
+    .status-option:hover { background: #1e2235; color: #e2e8f0; }
+    .status-option.active { color: #e2e8f0; }
+
+    /* ── Inline editing ── */
+    .inline-edit-input {
+      background: #0f1117; border: 1px solid #2563eb;
+      border-radius: 4px; padding: 0 6px !important; color: #e2e8f0;
+      font-size: 13px; outline: none; font-family: inherit;
+      height: 22px !important; box-sizing: border-box; flex: 1; min-width: 0;
+      width: auto !important; margin: 0 !important;
+    }
+    .inline-date-input {
+      background: #0f1117; border: 1px solid #2563eb;
+      border-radius: 4px; padding: 0 4px !important; color: #e2e8f0;
+      font-size: 11px; outline: none; font-family: inherit;
+      height: 20px !important; width: 120px !important; box-sizing: border-box; flex: none;
+      margin: 0 !important;
+    }
+    .priority-dot { cursor: pointer; transition: transform 0.15s; }
+    .priority-dot:hover { transform: scale(1.4); }
+    .sub-priority-dot { cursor: pointer; transition: transform 0.15s; }
+    .sub-priority-dot:hover { transform: scale(1.4); }
+    .due-label { cursor: pointer; }
+    .due-label:hover { color: #94a3b8; }
+    .task-name[data-editable] { cursor: text; }
+    .add-due {
+      font-size: 10px; color: #1e2235; cursor: pointer;
+      flex-shrink: 0; transition: color 0.15s;
+    }
+    .task:hover .add-due { color: #475569; }
+    .add-due:hover { color: #94a3b8 !important; }
+    .sub-due { cursor: pointer; }
+    .sub-due:hover { opacity: 0.7; }
   </style>
 </head>
 <body>
@@ -417,7 +575,7 @@
     const r = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, {
       headers: authHeaders(session.access_token)
     });
-    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    if (r.status === 401) { showSessionExpired(); throw new Error('Session expired'); }
     const data = await r.json();
     if (!r.ok) throw new Error(data.message || 'Database error');
     return data;
@@ -430,7 +588,7 @@
       headers: { ...authHeaders(session.access_token), 'Prefer': 'return=representation' },
       body:    JSON.stringify(row)
     });
-    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    if (r.status === 401) { showSessionExpired(); throw new Error('Session expired'); }
     const data = await r.json();
     if (!r.ok) throw new Error(data.message || 'Insert failed');
     return data;
@@ -442,8 +600,19 @@
       method:  'DELETE',
       headers: authHeaders(session.access_token)
     });
-    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    if (r.status === 401) { showSessionExpired(); throw new Error('Session expired'); }
     if (!r.ok) throw new Error('Delete failed');
+  }
+
+  async function sbUpsert(table, row) {
+    const session = getSession();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method:  'POST',
+      headers: { ...authHeaders(session.access_token), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body:    JSON.stringify(row)
+    });
+    if (r.status === 401) { showSessionExpired(); throw new Error('Session expired'); }
+    if (!r.ok) throw new Error('Upsert failed');
   }
 
   async function sbPatch(table, query, body) {
@@ -453,7 +622,7 @@
       headers: { ...authHeaders(session.access_token), 'Prefer': 'return=minimal' },
       body:    JSON.stringify(body)
     });
-    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    if (r.status === 401) { showSessionExpired(); throw new Error('Session expired'); }
     if (!r.ok) throw new Error('Update failed');
   }
 
@@ -463,6 +632,11 @@
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
     document.querySelector('.ai-footer').style.display = 'none';
+  }
+
+  function showSessionExpired() {
+    clearSession();
+    document.getElementById('sessionToast').classList.add('show');
   }
 
   function showApp() {
@@ -562,14 +736,16 @@
   async function loadNativeTasks() {
     const rows = await sbSelect('tasks', 'completed=eq.false&order=due_date');
     return rows.map(t => ({
-      id:       t.id,
-      name:     t.name,
-      due:      t.due_date ? new Date(t.due_date + 'T00:00:00') : null,
-      priority: t.priority || 'normal',
-      source:   'manual',
-      url:      null,
-      list:     '',
-      subtasks: []
+      id:           t.id,
+      name:         t.name,
+      due:          t.due_date ? new Date(t.due_date + 'T00:00:00') : null,
+      priority:     t.priority || 'normal',
+      status:       t.status || 'not-started',
+      source:       'manual',
+      url:          null,
+      list:         '',
+      document_url: t.document_url || null,
+      subtasks:     []
     }));
   }
 
@@ -608,16 +784,27 @@
       childrenOf[pid].push(t);
     });
 
+    let overridesMap = {};
+    try {
+      const overrides = await sbSelect('clickup_overrides', '');
+      overrides.forEach(o => { overridesMap[o.task_id] = o; });
+    } catch(e) { /* overrides are optional */ }
+
     return raw.filter(t => !t.parent).map(t => {
       const pid  = t.priority ? (typeof t.priority === 'object' ? t.priority.id : t.priority) : 3;
       const pMap = { 1: 'urgent', 2: 'high', 3: 'normal', 4: 'low' };
       const subs = childrenOf[t.id] || [];
+      const cuId = 'cu_' + t.id;
+      const ov   = overridesMap[cuId] || {};
       return {
-        id:       'cu_' + t.id,
+        id:       cuId,
         name:     t.name,
-        due:      t.due_date ? new Date(parseInt(t.due_date)) : null,
-        priority: pMap[pid] || 'normal',
-        source:   'clickup',
+        due:          ov.due_date ? new Date(ov.due_date + 'T00:00:00')
+                    : t.due_date  ? new Date(parseInt(t.due_date)) : null,
+        priority:     ov.priority || pMap[pid] || 'normal',
+        name:         ov.name || t.name,
+        document_url: ov.document_url || null,
+        source:       'clickup',
         url:      t.url || null,
         list:     t._listName || (t.list && t.list.name) || '',
         subtasks: subs.map(s => ({
@@ -632,20 +819,49 @@
 
   // ── Subtasks ─────────────────────────────────────────
 
-  function renderSubtaskDrawer(taskId, subtasks, source) {
-    const rows = subtasks.map(s => `
+  function renderSubtaskDrawer(taskId, subtasks) {
+    const todayMs = new Date().setHours(0,0,0,0);
+    const rows = subtasks.map(s => {
+      let dueTxt = '', dueCls = '';
+      if (s.due_date) {
+        const d = new Date(s.due_date + 'T00:00:00');
+        const diff = Math.round((d - todayMs) / 86400000);
+        if      (diff < 0)  { dueTxt = `${Math.abs(diff)}d ago`; dueCls = 'overdue'; }
+        else if (diff === 0) { dueTxt = 'Today'; }
+        else if (diff === 1) { dueTxt = 'Tomorrow'; }
+        else                 { dueTxt = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+      }
+      const prio = s.priority || 'normal';
+      const docChip = s.document_url
+        ? `<a class="doc-chip" href="${esc(s.document_url)}" target="_blank" rel="noopener" title="${esc(s.document_url)}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${(() => { try { return esc(new URL(s.document_url).hostname.replace('www.','')); } catch { return 'link'; } })()}</a>`
+        : '';
+      return `
       <div class="subtask-row" id="subrow-${s.id}">
-        <input type="checkbox" class="sub-check" ${s.completed ? 'checked' : ''}
-          onchange="toggleSubtaskComplete('${s.id}', '${taskId}', '${source}', this.checked)">
-        <span class="sub-name${s.completed ? ' sub-done' : ''}">${esc(s.name)}</span>
-        ${source === 'manual' ? `<button class="sub-del" onclick="deleteSubtask('${s.id}', '${taskId}')">×</button>` : ''}
-      </div>`).join('');
-    const form = source === 'manual' ? `
-      <form class="sub-add-form" onsubmit="addSubtask(event, '${taskId}')">
+        ${s.source === 'manual'
+          ? `<input type="checkbox" class="sub-check" ${s.completed ? 'checked' : ''} onchange="toggleSubtaskComplete('${s.id}','${taskId}',this.checked)">`
+          : `<input type="checkbox" class="sub-check" ${s.completed ? 'checked' : ''} disabled>`}
+        <span class="sub-priority-dot p-${prio}" id="pdot-${s.id}" ${s.source==='manual'?`onclick="openPriorityMenu('${s.id}','subtasks','${prio}',this)"`:''} title="Priority"></span>
+        <span class="sub-name${s.completed ? ' sub-done' : ''}" ${s.source==='manual'?`data-name="${esc(s.name)}" onclick="editSubName('${s.id}',this)"`:''} >${esc(s.name)}</span>
+        ${docChip}
+        ${dueTxt
+          ? `<span class="sub-due ${dueCls}" ${s.source==='manual'?`data-due="${s.due_date||''}" onclick="editSubDue('${s.id}',this)"`:''} >${dueTxt}</span>`
+          : (s.source==='manual' ? `<span class="sub-due add-due" data-due="" onclick="editSubDue('${s.id}',this)">+date</span>` : '')}
+        ${s.source === 'manual' ? `<button class="sub-del" onclick="deleteSubtask('${s.id}','${taskId}')">×</button>` : ''}
+      </div>`;
+    }).join('');
+    return rows + `
+      <form class="sub-add-form" onsubmit="addSubtask(event,'${taskId}')">
         <input type="text" class="sub-input" placeholder="Add subtask…" required>
-        <button type="submit" class="sub-add-btn">+</button>
-      </form>` : '';
-    return rows + form;
+        <div class="sub-date-wrap"><input type="date" class="sub-date"></div>
+        <select class="sub-priority">
+          <option value="normal">Normal</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+          <option value="low">Low</option>
+        </select>
+        <input type="url" class="sub-doc-input" placeholder="Doc URL">
+        <button type="submit" class="sub-add-btn">Add</button>
+      </form>`;
   }
 
   async function toggleSubtasks(taskId) {
@@ -654,22 +870,21 @@
     if (!drawer) return;
     const isOpen = drawer.classList.contains('open');
     if (!isOpen && !drawer.dataset.loaded) {
-      if (taskId.startsWith('cu_')) {
-        drawer.dataset.loaded = '1';
-        drawer.classList.add('open');
-        if (wrapper) wrapper.classList.add('expanded');
-        return;
-      }
       drawer.innerHTML = '<span class="sub-loading">Loading…</span>';
       drawer.classList.add('open');
       if (wrapper) wrapper.classList.add('expanded');
+      let cuSubs = [];
+      if (drawer.dataset.cuSubs) {
+        try { cuSubs = JSON.parse(decodeURIComponent(drawer.dataset.cuSubs)); } catch {}
+      }
       try {
         const subs = await sbSelect('subtasks', `task_id=eq.${taskId}&order=created_at`);
-        const mapped = subs.map(s => ({ id: s.id, name: s.name, completed: s.completed, source: 'manual' }));
-        drawer.innerHTML = renderSubtaskDrawer(taskId, mapped, 'manual');
+        const mapped = subs.map(s => ({ id: s.id, name: s.name, completed: s.completed, source: 'manual', priority: s.priority || 'normal', due_date: s.due_date || null, document_url: s.document_url || null }));
+        drawer.innerHTML = renderSubtaskDrawer(taskId, [...cuSubs, ...mapped]);
         drawer.dataset.loaded = '1';
       } catch (e) {
-        drawer.innerHTML = '<span class="sub-error">Failed to load</span>';
+        drawer.innerHTML = `<span class="sub-error">Could not load subtasks: ${e.message}</span>` + renderSubtaskDrawer(taskId, cuSubs);
+        drawer.dataset.loaded = '1';
       }
     } else {
       drawer.classList.toggle('open');
@@ -679,17 +894,24 @@
 
   async function addSubtask(event, taskId) {
     event.preventDefault();
-    const form  = event.target;
-    const input = form.querySelector('.sub-input');
-    const name  = input.value.trim();
+    const form       = event.target;
+    const input      = form.querySelector('.sub-input');
+    const name       = input.value.trim();
     if (!name) return;
+    const due_date    = form.querySelector('.sub-date').value || null;
+    const priority    = form.querySelector('.sub-priority').value;
+    const document_url = form.querySelector('.sub-doc-input').value.trim() || null;
     input.disabled = true;
     try {
-      await sbInsert('subtasks', { task_id: taskId, name });
+      await sbInsert('subtasks', { task_id: taskId, name, due_date, priority, document_url });
       const subs   = await sbSelect('subtasks', `task_id=eq.${taskId}&order=created_at`);
       const mapped = subs.map(s => ({ id: s.id, name: s.name, completed: s.completed, source: 'manual' }));
       const drawer = document.getElementById('sub-' + taskId);
-      drawer.innerHTML = renderSubtaskDrawer(taskId, mapped, 'manual');
+      let cuSubs = [];
+      if (drawer.dataset.cuSubs) {
+        try { cuSubs = JSON.parse(decodeURIComponent(drawer.dataset.cuSubs)); } catch {}
+      }
+      drawer.innerHTML = renderSubtaskDrawer(taskId, [...cuSubs, ...mapped]);
     } catch (e) {
       showError(e.message);
       input.disabled = false;
@@ -706,21 +928,11 @@
     }
   }
 
-  async function toggleSubtaskComplete(subtaskId, taskId, source, checked) {
+  async function toggleSubtaskComplete(subtaskId, taskId, checked) {
     const row = document.getElementById('subrow-' + subtaskId);
     if (row) row.querySelector('.sub-name').classList.toggle('sub-done', checked);
     try {
-      if (source === 'manual') {
-        await sbPatch('subtasks', `id=eq.${subtaskId}`, { completed: checked });
-      } else {
-        const rawId = subtaskId.replace('s_cu_', '');
-        const token = localStorage.getItem('cu_token');
-        await fetch(`${CU_BASE}/task/${rawId}`, {
-          method:  'PUT',
-          headers: { Authorization: token, 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ status: checked ? 'complete' : 'Open' })
-        });
-      }
+      await sbPatch('subtasks', `id=eq.${subtaskId}`, { completed: checked });
     } catch (e) {
       if (row) row.querySelector('.sub-name').classList.toggle('sub-done', !checked);
       showError(e.message);
@@ -830,15 +1042,17 @@
 
     const due      = document.getElementById('newDue').value || null;
     const priority = document.getElementById('newPriority').value;
+    const docUrl   = document.getElementById('newDocUrl').value.trim() || null;
     const btn      = document.getElementById('addBtn');
 
     btn.disabled = true;
     btn.textContent = '…';
 
     try {
-      await sbInsert('tasks', { name, due_date: due, priority, source: 'manual' });
-      document.getElementById('newName').value = '';
-      document.getElementById('newDue').value  = '';
+      await sbInsert('tasks', { name, due_date: due, priority, source: 'manual', document_url: docUrl });
+      document.getElementById('newName').value   = '';
+      document.getElementById('newDocUrl').value = '';
+      document.getElementById('newDue').value    = '';
       document.getElementById('newPriority').value = 'normal';
       loadAll();
     } catch (e) {
@@ -849,6 +1063,156 @@
     btn.textContent = 'Add';
   }
 
+  // ── Priority menu ────────────────────────────────────
+
+  const PRIORITY_CONFIG = [
+    { value: 'urgent', label: 'Urgent', color: '#f87171' },
+    { value: 'high',   label: 'High',   color: '#fb923c' },
+    { value: 'normal', label: 'Normal', color: '#60a5fa' },
+    { value: 'low',    label: 'Low',    color: '#4b5563' },
+  ];
+  let _priorityMenu = null;
+
+  function openPriorityMenu(id, table, current, btn) {
+    if (_priorityMenu) { _priorityMenu.remove(); _priorityMenu = null; }
+    if (_statusMenu)   { _statusMenu.remove();   _statusMenu   = null; }
+    const rect = btn.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'status-menu';
+    menu.style.cssText = `position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:300`;
+    menu.innerHTML = PRIORITY_CONFIG.map(o => `
+      <div class="status-option${o.value === current ? ' active' : ''}" onclick="updatePriority('${id}','${table}','${o.value}')">
+        <span class="status-dot" style="background:${o.color}"></span>${o.label}
+      </div>`).join('');
+    document.body.appendChild(menu);
+    _priorityMenu = menu;
+    setTimeout(() => document.addEventListener('click', () => {
+      if (_priorityMenu) { _priorityMenu.remove(); _priorityMenu = null; }
+    }, { once: true }), 0);
+  }
+
+  async function updatePriority(id, table, priority) {
+    if (_priorityMenu) { _priorityMenu.remove(); _priorityMenu = null; }
+    const dot = document.getElementById('pdot-' + id);
+    if (dot) dot.className = dot.className.replace(/p-\w+/, 'p-' + priority);
+    try {
+      if (table === 'clickup_overrides') await sbUpsert('clickup_overrides', { task_id: id, priority });
+      else await sbPatch(table, `id=eq.${id}`, { priority });
+    }
+    catch(e) { showError(e.message); }
+  }
+
+  function editCuTaskDue(taskId, el) {
+    const current = el.dataset.due || '';
+    const input = document.createElement('input');
+    input.type = 'date'; input.className = 'inline-date-input'; input.value = current;
+    el.replaceWith(input); input.focus();
+    const save = async () => {
+      const due = input.value || null;
+      if (due) {
+        el.textContent = fmtDate(new Date(due + 'T00:00:00'));
+        el.className = 'due-label'; el.dataset.due = due;
+      } else {
+        el.textContent = '+date'; el.className = 'add-due'; el.dataset.due = '';
+      }
+      input.replaceWith(el);
+      try { await sbUpsert('clickup_overrides', { task_id: taskId, due_date: due }); }
+      catch(e) { showError(e.message); }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => { if (e.key === 'Escape') input.blur(); });
+  }
+
+  // ── Inline editing ────────────────────────────────────
+
+  function editTaskName(taskId, el) {
+    const current = el.dataset.name;
+    const input = document.createElement('input');
+    input.type = 'text'; input.className = 'inline-edit-input'; input.value = current;
+    el.replaceWith(input); input.focus(); input.select();
+    const save = async () => {
+      const name = input.value.trim() || current;
+      el.textContent = name; el.dataset.name = name; input.replaceWith(el);
+      if (name !== current) {
+        try { await sbPatch('tasks', `id=eq.${taskId}`, { name }); }
+        catch(e) { showError(e.message); el.textContent = current; el.dataset.name = current; }
+      }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = current; input.blur(); }
+    });
+  }
+
+  function editTaskDue(taskId, el) {
+    const current = el.dataset.due || '';
+    const input = document.createElement('input');
+    input.type = 'date'; input.className = 'inline-date-input'; input.value = current;
+    el.replaceWith(input); input.focus();
+    const save = async () => {
+      const due = input.value || null;
+      if (due) {
+        el.textContent = fmtDate(new Date(due + 'T00:00:00'));
+        el.className = 'due-label'; el.dataset.due = due;
+      } else {
+        el.textContent = '+date'; el.className = 'add-due'; el.dataset.due = '';
+      }
+      input.replaceWith(el);
+      try { await sbPatch('tasks', `id=eq.${taskId}`, { due_date: due }); }
+      catch(e) { showError(e.message); }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => { if (e.key === 'Escape') input.blur(); });
+  }
+
+  function editSubName(subId, el) {
+    const current = el.dataset.name;
+    const input = document.createElement('input');
+    input.type = 'text'; input.className = 'inline-edit-input'; input.value = current;
+    input.style.cssText = 'font-size:12px;height:20px;';
+    el.replaceWith(input); input.focus(); input.select();
+    const save = async () => {
+      const name = input.value.trim() || current;
+      el.textContent = name; el.dataset.name = name; input.replaceWith(el);
+      if (name !== current) {
+        try { await sbPatch('subtasks', `id=eq.${subId}`, { name }); }
+        catch(e) { showError(e.message); el.textContent = current; el.dataset.name = current; }
+      }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = current; input.blur(); }
+    });
+  }
+
+  function editSubDue(subId, el) {
+    const current = el.dataset.due || '';
+    const input = document.createElement('input');
+    input.type = 'date'; input.className = 'inline-date-input'; input.value = current;
+    el.replaceWith(input); input.focus();
+    const todayMs = new Date().setHours(0,0,0,0);
+    const save = async () => {
+      const due = input.value || null;
+      if (due) {
+        const d = new Date(due + 'T00:00:00');
+        const diff = Math.round((d - todayMs) / 86400000);
+        let txt = diff < 0 ? `${Math.abs(diff)}d ago` : diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        el.textContent = txt;
+        el.className = `sub-due${diff < 0 ? ' overdue' : ''}`;
+        el.dataset.due = due;
+      } else {
+        el.textContent = '+date'; el.className = 'sub-due add-due'; el.dataset.due = '';
+      }
+      input.replaceWith(el);
+      try { await sbPatch('subtasks', `id=eq.${subId}`, { due_date: due }); }
+      catch(e) { showError(e.message); }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => { if (e.key === 'Escape') input.blur(); });
+  }
+
   async function deleteTask(id) {
     try {
       await sbDelete('tasks', id);
@@ -856,6 +1220,113 @@
     } catch (e) {
       showError(e.message);
     }
+  }
+
+  const STATUS_CONFIG = [
+    { value: 'not-started', label: 'Not Started', color: '#475569' },
+    { value: 'in-progress', label: 'In Progress', color: '#60a5fa' },
+    { value: 'blocked',     label: 'Blocked',     color: '#f87171' },
+    { value: 'finished',    label: 'Finished',    color: '#34d399' },
+  ];
+
+  let _statusMenu = null;
+
+  function openStatusMenu(taskId, currentStatus, btn) {
+    if (_statusMenu) { _statusMenu.remove(); _statusMenu = null; }
+    const rect = btn.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'status-menu';
+    menu.style.cssText = `position:fixed;top:${rect.bottom + 4}px;left:${rect.left}px;z-index:300`;
+    menu.innerHTML = STATUS_CONFIG.map(s => `
+      <div class="status-option${s.value === currentStatus ? ' active' : ''}"
+        onclick="updateTaskStatus('${taskId}','${s.value}')">
+        <span class="status-dot" style="background:${s.color}"></span>${s.label}
+      </div>`).join('');
+    document.body.appendChild(menu);
+    _statusMenu = menu;
+    setTimeout(() => document.addEventListener('click', () => {
+      if (_statusMenu) { _statusMenu.remove(); _statusMenu = null; }
+    }, { once: true }), 0);
+  }
+
+  async function updateTaskStatus(taskId, status) {
+    if (_statusMenu) { _statusMenu.remove(); _statusMenu = null; }
+    const badge = document.getElementById('status-' + taskId);
+    const cfg = STATUS_CONFIG.find(s => s.value === status);
+    if (badge && cfg) {
+      badge.className = `status-badge s-${status}`;
+      badge.dataset.status = status;
+      badge.innerHTML = `<span class="status-dot" style="background:${cfg.color}"></span>${cfg.label}`;
+    }
+    try {
+      await sbPatch('tasks', `id=eq.${taskId}`, { status });
+    } catch (e) {
+      showError(e.message);
+      loadAll();
+    }
+  }
+
+  async function openSubtaskAdd(taskId) {
+    const drawer = document.getElementById('sub-' + taskId);
+    if (!drawer) return;
+    if (!drawer.classList.contains('open')) await toggleSubtasks(taskId);
+    const input = drawer.querySelector('.sub-input');
+    if (input) { input.focus(); input.select(); }
+  }
+
+  function editDocUrl(taskId, currentUrl) {
+    const existing = document.getElementById('doc-edit-' + taskId);
+    if (existing) { existing.remove(); return; }
+    const wrapper = document.getElementById('wrap-' + taskId);
+    const div = document.createElement('div');
+    div.id = 'doc-edit-' + taskId;
+    div.className = 'doc-edit-row';
+    div.innerHTML = `
+      <input type="url" class="doc-edit-input" value="${esc(currentUrl)}" placeholder="Paste document URL…">
+      <button class="doc-edit-save" onclick="saveDocUrl('${taskId}', this)">Save</button>
+      <button class="doc-edit-cancel" onclick="document.getElementById('doc-edit-${taskId}').remove()">Cancel</button>`;
+    wrapper.appendChild(div);
+    const input = div.querySelector('input');
+    input.focus();
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveDocUrl(taskId, div.querySelector('.doc-edit-save'));
+      if (e.key === 'Escape') div.remove();
+    });
+  }
+
+  async function saveDocUrl(taskId, btn) {
+    const row = document.getElementById('doc-edit-' + taskId);
+    const url = row.querySelector('input').value.trim() || null;
+    btn.disabled = true;
+    try {
+      if (taskId.startsWith('cu_')) await sbUpsert('clickup_overrides', { task_id: taskId, document_url: url });
+      else await sbPatch('tasks', `id=eq.${taskId}`, { document_url: url });
+      row.remove();
+      loadAll();
+    } catch (e) {
+      showError(e.message);
+      btn.disabled = false;
+    }
+  }
+
+  function editCuTaskName(taskId, el) {
+    const current = el.dataset.name;
+    const input = document.createElement('input');
+    input.type = 'text'; input.className = 'inline-edit-input'; input.value = current;
+    el.replaceWith(input); input.focus(); input.select();
+    const save = async () => {
+      const name = input.value.trim() || current;
+      el.textContent = name; el.dataset.name = name; input.replaceWith(el);
+      if (name !== current) {
+        try { await sbUpsert('clickup_overrides', { task_id: taskId, name }); }
+        catch(e) { showError(e.message); el.textContent = current; el.dataset.name = current; }
+      }
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = current; input.blur(); }
+    });
   }
 
   // ── Render ───────────────────────────────────────────
@@ -900,21 +1371,29 @@
     const dueTxt  = t.due ? fmtDate(t.due) : '';
     const dueCls  = isOverdue ? 'overdue' : (dueTxt === 'Today' ? 'today' : '');
     const hasSubs = t.subtasks && t.subtasks.length > 0;
+    const rawDue = t.due ? t.due.toISOString().split('T')[0] : '';
     const inner = `
-      <span class="priority-dot p-${t.priority}"></span>
+      <span class="priority-dot p-${t.priority}" id="pdot-${t.id}" onclick="event.stopPropagation();openPriorityMenu('${t.id}','${t.source==='manual'?'tasks':'clickup_overrides'}','${t.priority}',this)" title="Priority"></span>
+      <button class="task-action-btn" onclick="event.stopPropagation();openSubtaskAdd('${t.id}')" title="Add subtask">+</button>
+      <button class="task-action-btn" onclick="event.stopPropagation();editDocUrl('${t.id}','${esc(t.document_url||'')}')" title="Set document"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+      ${t.source === 'manual' ? `<button class="status-badge s-${t.status}" id="status-${t.id}" data-status="${t.status}" onclick="event.stopPropagation();openStatusMenu('${t.id}','${t.status}',this)"><span class="status-dot"></span>${STATUS_CONFIG.find(s=>s.value===t.status)?.label||'Not Started'}</button>` : ''}
       ${hasSubs ? `<span class="sub-chevron">${t.subtasks.length}</span>` : ''}
-      <span class="task-name">${esc(t.name)}</span>
+      ${t.source === 'manual'
+        ? `<span class="task-name" data-name="${esc(t.name)}" data-editable onclick="event.stopPropagation();editTaskName('${t.id}',this)">${esc(t.name)}</span>`
+        : `<span class="task-name" data-name="${esc(t.name)}" data-editable onclick="event.stopPropagation();editCuTaskName('${t.id}',this)">${esc(t.name)}</span>`}
+      ${t.document_url ? `<a class="doc-chip" href="${esc(t.document_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${esc(t.document_url)}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${(() => { try { return esc(new URL(t.document_url).hostname.replace('www.','')); } catch { return 'link'; } })()}</a>` : ''}
       <span class="source-badge source-${t.source}">${t.source === 'clickup' ? 'ClickUp' : 'Manual'}</span>
       ${t.list && t.url ? `<a class="source-badge source-manual task-list-link" href="${t.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(t.list)}</a>` : t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
-      ${dueTxt  ? `<span class="due-label ${dueCls}">${dueTxt}</span>` : ''}
+      ${dueTxt
+        ? `<span class="due-label ${dueCls}" data-due="${rawDue}" onclick="event.stopPropagation();${t.source==='manual'?`editTaskDue('${t.id}',this)`:`editCuTaskDue('${t.id}',this)`}">${dueTxt}</span>`
+        : `<span class="add-due" data-due="" onclick="event.stopPropagation();${t.source==='manual'?`editTaskDue('${t.id}',this)`:`editCuTaskDue('${t.id}',this)`}">+date</span>`}
       ${t.source === 'manual' ? `<button class="task-del" onclick="event.stopPropagation();deleteTask('${t.id}')" title="Remove">×</button>` : ''}
     `;
     const row = `<div class="task${hasSubs ? ' has-subs' : ''}" onclick="toggleSubtasks('${t.id}')">${inner}</div>`;
-    const drawerAttrs = hasSubs && t.source === 'clickup' ? ' data-loaded="1"' : '';
-    const drawerContent = hasSubs && t.source === 'clickup'
-      ? renderSubtaskDrawer(t.id, t.subtasks, 'clickup')
+    const cuSubsAttr = t.source === 'clickup' && hasSubs
+      ? ` data-cu-subs="${esc(encodeURIComponent(JSON.stringify(t.subtasks)))}"`
       : '';
-    return `<div class="task-wrapper" id="wrap-${t.id}">${row}<div class="subtask-drawer" id="sub-${t.id}"${drawerAttrs}>${drawerContent}</div></div>`;
+    return `<div class="task-wrapper" id="wrap-${t.id}">${row}<div class="subtask-drawer" id="sub-${t.id}"${cuSubsAttr}></div></div>`;
   }
 
   // ── Helpers ──────────────────────────────────────────
@@ -946,6 +1425,11 @@
   boot();
 </script>
 
+<div class="toast" id="sessionToast">
+  Session expired
+  <button class="toast-btn" onclick="signOut()">Sign in again</button>
+</div>
+
 <div class="ai-footer" style="display:none">
   <div class="ai-bar">
     <button class="menu-toggle" onclick="toggleAddMode()" title="Switch input mode">&#9776;</button>
@@ -957,6 +1441,7 @@
 
     <div id="modeManual" class="mode-panel" style="display:none">
       <input type="text" id="newName" class="ai-input" placeholder="Task name" onkeydown="if(event.key==='Enter')addTask()" style="flex:2">
+      <input type="url" id="newDocUrl" class="ai-input" placeholder="Doc URL (optional)" style="flex:1.5">
       <input type="date" id="newDue" class="ai-input" style="flex:0 0 140px">
       <select id="newPriority" class="ai-input" style="flex:0 0 100px">
         <option value="normal">Normal</option>
