@@ -231,6 +231,53 @@
 
     hr { border: none; border-top: 1px solid #1e2235; margin: 16px 0; }
     .hint { font-size: 11px; color: #475569; margin-top: -10px; margin-bottom: 14px; }
+
+    /* ── Subtasks ── */
+    .task-wrapper { display: flex; flex-direction: column; }
+
+    .sub-toggle {
+      background: none; border: none; color: #334155; font-size: 11px;
+      padding: 0 4px; cursor: pointer; line-height: 1; flex-shrink: 0;
+      margin-left: auto; transition: color 0.15s;
+    }
+    .sub-toggle:hover { color: #94a3b8; background: none; }
+
+    .subtask-drawer {
+      display: none; flex-direction: column; gap: 4px;
+      padding: 4px 12px 6px 28px;
+      margin: 0 12px 4px 12px;
+      border-left: 2px solid #1e2235;
+    }
+    .subtask-drawer.open { display: flex; }
+
+    .subtask-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: #94a3b8;
+    }
+    .sub-check { accent-color: #2563eb; cursor: pointer; flex-shrink: 0; }
+    .sub-name  { flex: 1; }
+    .sub-done  { text-decoration: line-through; color: #475569; }
+
+    .sub-del {
+      background: none; border: none; color: #334155; font-size: 13px;
+      padding: 0 2px; cursor: pointer; flex-shrink: 0; transition: color 0.15s;
+    }
+    .sub-del:hover { color: #f87171; background: none; }
+
+    .sub-add-form { display: flex; gap: 6px; margin-top: 4px; }
+    .sub-input {
+      flex: 1; background: #0f1117; border: 1px solid #1e2235;
+      border-radius: 4px; padding: 4px 8px; color: #e2e8f0;
+      font-size: 12px; outline: none; margin-bottom: 0; width: auto;
+    }
+    .sub-input:focus { border-color: #2563eb; }
+    .sub-add-btn {
+      background: #1e2235; color: #94a3b8; border: none;
+      border-radius: 4px; padding: 4px 10px; font-size: 13px; cursor: pointer;
+    }
+    .sub-add-btn:hover { background: #263048; }
+    .sub-loading, .sub-error { font-size: 11px; color: #475569; padding: 2px 0; }
+    .sub-error { color: #f87171; }
   </style>
 </head>
 <body>
@@ -378,6 +425,17 @@
     if (!r.ok) throw new Error('Delete failed');
   }
 
+  async function sbPatch(table, query, body) {
+    const session = getSession();
+    const r = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, {
+      method:  'PATCH',
+      headers: { ...authHeaders(session.access_token), 'Prefer': 'return=minimal' },
+      body:    JSON.stringify(body)
+    });
+    if (r.status === 401) { clearSession(); showLogin(); throw new Error('Session expired'); }
+    if (!r.ok) throw new Error('Update failed');
+  }
+
   // ── Auth ─────────────────────────────────────────────
 
   function showLogin() {
@@ -487,7 +545,8 @@
       priority: t.priority || 'normal',
       source:   'manual',
       url:      null,
-      list:     ''
+      list:     '',
+      subtasks: []
     }));
   }
 
@@ -500,7 +559,7 @@
     let raw = [];
 
     if (listId) {
-      const r = await fetch(`${CU_BASE}/list/${listId}/task?include_closed=false`, { headers: h });
+      const r = await fetch(`${CU_BASE}/list/${listId}/task?include_closed=false&subtasks=true`, { headers: h });
       if (!r.ok) { const body = await r.json().catch(() => ({})); throw new Error('ClickUp ' + r.status + ': ' + (body.err || body.error || JSON.stringify(body))); }
       raw = (await r.json()).tasks || [];
     } else {
@@ -512,7 +571,7 @@
         for (const space of spaces) {
           const lists = (await (await fetch(`${CU_BASE}/space/${space.id}/list?archived=false`, { headers: h })).json()).lists || [];
           for (const list of lists) {
-            const tasks = (await (await fetch(`${CU_BASE}/list/${list.id}/task?include_closed=false`, { headers: h })).json()).tasks || [];
+            const tasks = (await (await fetch(`${CU_BASE}/list/${list.id}/task?include_closed=false&subtasks=true`, { headers: h })).json()).tasks || [];
             tasks.forEach(t => { t._listName = list.name; raw.push(t); });
           }
         }
@@ -529,9 +588,103 @@
         priority: pMap[pid] || 'normal',
         source:   'clickup',
         url:      t.url || null,
-        list:     t._listName || (t.list && t.list.name) || ''
+        list:     t._listName || (t.list && t.list.name) || '',
+        subtasks: (t.subtasks || []).map(s => ({
+          id:        's_cu_' + s.id,
+          name:      s.name,
+          completed: !!(s.status && (s.status.type === 'closed' || s.status.status === 'complete')),
+          source:    'clickup'
+        }))
       };
     });
+  }
+
+  // ── Subtasks ─────────────────────────────────────────
+
+  function renderSubtaskDrawer(taskId, subtasks, source) {
+    const rows = subtasks.map(s => `
+      <div class="subtask-row" id="subrow-${s.id}">
+        <input type="checkbox" class="sub-check" ${s.completed ? 'checked' : ''}
+          onchange="toggleSubtaskComplete('${s.id}', '${taskId}', '${source}', this.checked)">
+        <span class="sub-name${s.completed ? ' sub-done' : ''}">${esc(s.name)}</span>
+        ${source === 'manual' ? `<button class="sub-del" onclick="deleteSubtask('${s.id}', '${taskId}')">×</button>` : ''}
+      </div>`).join('');
+    const form = source === 'manual' ? `
+      <form class="sub-add-form" onsubmit="addSubtask(event, '${taskId}')">
+        <input type="text" class="sub-input" placeholder="Add subtask…" required>
+        <button type="submit" class="sub-add-btn">+</button>
+      </form>` : '';
+    return rows + form;
+  }
+
+  async function toggleSubtasks(taskId) {
+    const drawer = document.getElementById('sub-' + taskId);
+    if (!drawer) return;
+    const isOpen = drawer.classList.contains('open');
+    if (!isOpen && !drawer.dataset.loaded) {
+      drawer.innerHTML = '<span class="sub-loading">Loading…</span>';
+      drawer.classList.add('open');
+      try {
+        const subs = await sbSelect('subtasks', `task_id=eq.${taskId}&order=created_at`);
+        const mapped = subs.map(s => ({ id: s.id, name: s.name, completed: s.completed, source: 'manual' }));
+        drawer.innerHTML = renderSubtaskDrawer(taskId, mapped, 'manual');
+        drawer.dataset.loaded = '1';
+      } catch (e) {
+        drawer.innerHTML = '<span class="sub-error">Failed to load</span>';
+      }
+    } else {
+      drawer.classList.toggle('open');
+    }
+  }
+
+  async function addSubtask(event, taskId) {
+    event.preventDefault();
+    const form  = event.target;
+    const input = form.querySelector('.sub-input');
+    const name  = input.value.trim();
+    if (!name) return;
+    input.disabled = true;
+    try {
+      await sbInsert('subtasks', { task_id: taskId, name });
+      const subs   = await sbSelect('subtasks', `task_id=eq.${taskId}&order=created_at`);
+      const mapped = subs.map(s => ({ id: s.id, name: s.name, completed: s.completed, source: 'manual' }));
+      const drawer = document.getElementById('sub-' + taskId);
+      drawer.innerHTML = renderSubtaskDrawer(taskId, mapped, 'manual');
+    } catch (e) {
+      showError(e.message);
+      input.disabled = false;
+    }
+  }
+
+  async function deleteSubtask(subtaskId, taskId) {
+    try {
+      await sbDelete('subtasks', subtaskId);
+      const row = document.getElementById('subrow-' + subtaskId);
+      if (row) row.remove();
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  async function toggleSubtaskComplete(subtaskId, taskId, source, checked) {
+    const row = document.getElementById('subrow-' + subtaskId);
+    if (row) row.querySelector('.sub-name').classList.toggle('sub-done', checked);
+    try {
+      if (source === 'manual') {
+        await sbPatch('subtasks', `id=eq.${subtaskId}`, { completed: checked });
+      } else {
+        const rawId = subtaskId.replace('s_cu_', '');
+        const token = localStorage.getItem('cu_token');
+        await fetch(`${CU_BASE}/task/${rawId}`, {
+          method:  'PUT',
+          headers: { Authorization: token, 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ status: checked ? 'complete' : 'Open' })
+        });
+      }
+    } catch (e) {
+      if (row) row.querySelector('.sub-name').classList.toggle('sub-done', !checked);
+      showError(e.message);
+    }
   }
 
   // ── Add / Delete ─────────────────────────────────────
@@ -609,19 +762,27 @@
   }
 
   function taskRow(t, isOverdue) {
-    const dueTxt = t.due ? fmtDate(t.due) : '';
-    const dueCls = isOverdue ? 'overdue' : (dueTxt === 'Today' ? 'today' : '');
-    const inner  = `
+    const dueTxt  = t.due ? fmtDate(t.due) : '';
+    const dueCls  = isOverdue ? 'overdue' : (dueTxt === 'Today' ? 'today' : '');
+    const hasSubs = t.subtasks && t.subtasks.length > 0;
+    const subCount = hasSubs ? ` ${t.subtasks.length}` : '';
+    const inner = `
       <span class="priority-dot p-${t.priority}"></span>
       <span class="task-name">${esc(t.name)}</span>
       <span class="source-badge source-${t.source}">${t.source === 'clickup' ? 'ClickUp' : 'Manual'}</span>
       ${t.list ? `<span class="source-badge source-manual">${esc(t.list)}</span>` : ''}
       ${dueTxt  ? `<span class="due-label ${dueCls}">${dueTxt}</span>` : ''}
       ${t.source === 'manual' ? `<button class="task-del" onclick="deleteTask('${t.id}')" title="Remove">×</button>` : ''}
+      <button class="sub-toggle" onclick="event.preventDefault();toggleSubtasks('${t.id}')" title="Subtasks">▶${subCount}</button>
     `;
-    return t.source === 'clickup' && t.url
+    const row = t.source === 'clickup' && t.url
       ? `<a class="task" href="${t.url}" target="_blank" rel="noopener">${inner}</a>`
       : `<div class="task">${inner}</div>`;
+    const drawerAttrs = hasSubs && t.source === 'clickup' ? ' data-loaded="1"' : '';
+    const drawerContent = hasSubs && t.source === 'clickup'
+      ? renderSubtaskDrawer(t.id, t.subtasks, 'clickup')
+      : '';
+    return `<div class="task-wrapper">${row}<div class="subtask-drawer" id="sub-${t.id}"${drawerAttrs}>${drawerContent}</div></div>`;
   }
 
   // ── Helpers ──────────────────────────────────────────
