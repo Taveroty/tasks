@@ -585,6 +585,40 @@
       font-size: 9px; padding: 1px 4px; line-height: 1.3;
       min-width: 14px; text-align: center; pointer-events: none;
     }
+
+    /* ── Agents ── */
+    .sidebar-agents { padding: 12px 16px 20px; border-top: 1px solid #1e2235; }
+    .agent-templates { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .agent-tpl-btn {
+      background: #1e2235; color: #94a3b8; border: 1px solid #2a3248;
+      border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .agent-tpl-btn:hover { background: #263048; border-color: #2563eb55; color: #e2e8f0; }
+    .agent-tpl-btn:disabled { opacity: 0.4; cursor: default; }
+    .agent-custom-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .agent-custom-input {
+      flex: 1; background: #0f1117; border: 1px solid #1e2235;
+      border-radius: 4px; padding: 0 8px; color: #e2e8f0;
+      font-size: 12px; outline: none; margin: 0; height: 28px; box-sizing: border-box;
+    }
+    .agent-custom-input:focus { border-color: #2563eb; }
+    .agent-run-btn {
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 4px; padding: 0 12px; font-size: 12px;
+      cursor: pointer; height: 28px; flex-shrink: 0;
+    }
+    .agent-run-btn:hover { background: #1d4ed8; }
+    .agent-run-btn:disabled { background: #1e2235; color: #475569; cursor: default; }
+    .agent-status { font-size: 11px; color: #475569; margin-bottom: 6px; min-height: 16px; }
+    .agent-output {
+      width: 100%; background: #0a0d14; border: 1px solid #1e2235;
+      border-radius: 6px; padding: 8px 10px; color: #cbd5e1;
+      font-size: 12px; font-family: inherit; line-height: 1.6;
+      min-height: 80px; max-height: 280px; overflow-y: auto;
+      box-sizing: border-box; resize: vertical;
+    }
+    .agent-unavailable { font-size: 12px; color: #475569; }
   </style>
 </head>
 <body>
@@ -1460,6 +1494,7 @@
     document.getElementById('notesFeed').innerHTML = '<span class="notes-empty">Loading…</span>';
     document.getElementById('sidebarDocInput').value = '';
     document.getElementById('noteInput').value = '';
+    resetAgentPanel();
     document.getElementById('sidebar').classList.add('open');
     document.getElementById('sidebarOverlay').classList.add('open');
     fetchSidebarData(taskId);
@@ -1664,7 +1699,88 @@
     b.style.display = '';
   }
 
+  // ── Agents ──────────────────────────────────────────
+
+  const AGENT_TEMPLATES = {
+    email:    'Draft a professional email related to this task. Include a subject line and body.',
+    summarize:'Summarize what this task involves and what completing it would mean.',
+    document: 'Create a structured document outline or template appropriate for this task.',
+    steps:    'Break this task down into clear, actionable next steps I can follow.',
+  };
+
+  function initAgents() {
+    const unavail = document.getElementById('agentUnavailable');
+    const avail   = document.getElementById('agentAvailable');
+    if (window.electronAPI) {
+      avail.style.display   = '';
+      unavail.style.display = 'none';
+      window.electronAPI.onAgentOutput(chunk => {
+        const out = document.getElementById('agentOutput');
+        const st  = document.getElementById('agentStatus');
+        if (!out) return;
+        out.style.display = '';
+        out.textContent += chunk;
+        out.scrollTop = out.scrollHeight;
+        if (st) st.textContent = 'Running…';
+      });
+      window.electronAPI.onAgentDone(() => {
+        const st   = document.getElementById('agentStatus');
+        const btns = document.querySelectorAll('.agent-tpl-btn, #agentRunBtn');
+        if (st) st.textContent = 'Done';
+        btns.forEach(b => { b.disabled = false; });
+      });
+      window.electronAPI.onAgentError(msg => {
+        const st   = document.getElementById('agentStatus');
+        const btns = document.querySelectorAll('.agent-tpl-btn, #agentRunBtn');
+        if (st) { st.textContent = 'Error: ' + msg; st.style.color = '#f87171'; }
+        btns.forEach(b => { b.disabled = false; });
+      });
+    } else {
+      unavail.style.display = '';
+      avail.style.display   = 'none';
+    }
+  }
+
+  function buildTaskContext(task) {
+    let ctx = `Task: ${task.name}`;
+    if (task.priority && task.priority !== 'normal') ctx += `\nPriority: ${task.priority}`;
+    if (task.due) ctx += `\nDue: ${fmtDate(task.due)}`;
+    if (task.list) ctx += `\nList: ${task.list}`;
+    if (task.document_url) ctx += `\nDoc: ${task.document_url}`;
+    return ctx;
+  }
+
+  function runAgent(type) {
+    if (!window.electronAPI || !_sidebarTask) return;
+    const prompt = type === 'custom'
+      ? document.getElementById('agentCustomInput').value.trim()
+      : AGENT_TEMPLATES[type];
+    if (!prompt) return;
+
+    const out  = document.getElementById('agentOutput');
+    const st   = document.getElementById('agentStatus');
+    const btns = document.querySelectorAll('.agent-tpl-btn, #agentRunBtn');
+
+    out.style.display = '';
+    out.textContent   = '';
+    st.textContent    = 'Running…';
+    st.style.color    = '#475569';
+    btns.forEach(b => { b.disabled = true; });
+
+    window.electronAPI.invokeAgent(buildTaskContext(_sidebarTask), prompt);
+  }
+
+  function resetAgentPanel() {
+    const out = document.getElementById('agentOutput');
+    const st  = document.getElementById('agentStatus');
+    if (out) { out.style.display = 'none'; out.textContent = ''; }
+    if (st)  { st.textContent = ''; st.style.color = '#475569'; }
+    const btns = document.querySelectorAll('.agent-tpl-btn, #agentRunBtn');
+    btns.forEach(b => { b.disabled = false; });
+  }
+
   boot();
+  document.addEventListener('DOMContentLoaded', initAgents);
 </script>
 
 <div class="toast" id="sessionToast">
@@ -1698,6 +1814,28 @@
         <textarea class="note-textarea" id="noteInput" placeholder="Add a note…" rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sidebarPostNote()}"></textarea>
         <button class="note-post-btn" id="notePostBtn" onclick="sidebarPostNote()">Post</button>
+      </div>
+    </div>
+
+    <div class="sidebar-agents">
+      <div class="sidebar-notes-header">Agents</div>
+      <div id="agentUnavailable" class="agent-unavailable" style="display:none">
+        Agents run via Claude Code and require the desktop app.
+      </div>
+      <div id="agentAvailable" style="display:none">
+        <div class="agent-templates">
+          <button class="agent-tpl-btn" onclick="runAgent('email')">Draft email</button>
+          <button class="agent-tpl-btn" onclick="runAgent('summarize')">Summarize</button>
+          <button class="agent-tpl-btn" onclick="runAgent('document')">Create doc outline</button>
+          <button class="agent-tpl-btn" onclick="runAgent('steps')">Next steps</button>
+        </div>
+        <div class="agent-custom-row">
+          <input type="text" class="agent-custom-input" id="agentCustomInput" placeholder="Custom instruction…"
+            onkeydown="if(event.key==='Enter')runAgent('custom')">
+          <button class="agent-run-btn" id="agentRunBtn" onclick="runAgent('custom')">Run</button>
+        </div>
+        <div class="agent-status" id="agentStatus"></div>
+        <textarea class="agent-output" id="agentOutput" style="display:none"></textarea>
       </div>
     </div>
   </div>
